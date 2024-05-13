@@ -9,22 +9,47 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+### House Prices - Advanced Regression Techniques 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(readr)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/train.csv')
+test_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+head(train_df)
+```
+
+1. Pick one of the quanititative independent variables from the training data set (train.csv) , and define that variable as  X.   
+2. Make sure this variable is skewed to the right!  
+3. Pick the dependent variable and define it as  Y.
+
+1. Quantitative Independent Variable (X)
+Among your dataset fields, a good choice for a quantitative independent variable (predictor) is GrLivArea. This variable represents the above grade (ground) living area in square feet. This is a continuous variable and is likely to have a linear relationship with the property’s sale price, making it a suitable candidate for regression analysis. Let's define it as X:
+
+But first, let's check if it's right skewed:
+```{r}
+library(e1071)
+
+# Calculate skewness
+skewness_grlivarea <- skewness(test_df$GrLivArea)
+
+skewness_grlivarea
+```
+
+```{r}
+# the skewness of GrLivArea is approximately 1.13, it already exhibits right skewness.
+
+# defining X variable
+X <- test_df$GrLivArea
+```
+
+2. Dependent Variable (Y)
+The dependent variable, which you want to predict, is SalePrice. This is the property's sale price in dollars and is the target variable in your regression analysis. As you aim to predict the sale price based on other variables, it is appropriate to define it as Y:
+```{r}
+Y <- test_df$SalePrice
+```
