@@ -17,7 +17,7 @@ library(readr)
 
 ```{r}
 train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/train.csv')
-test_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
+train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
 ```
 
 ```{r}
@@ -36,7 +36,7 @@ But first, let's check if it's right skewed:
 library(e1071)
 
 # Calculate skewness
-skewness_grlivarea <- skewness(test_df$GrLivArea)
+skewness_grlivarea <- skewness(train_df$GrLivArea)
 
 skewness_grlivarea
 ```
@@ -45,11 +45,93 @@ skewness_grlivarea
 # the skewness of GrLivArea is approximately 1.13, it already exhibits right skewness.
 
 # defining X variable
-X <- test_df$GrLivArea
+X <- train_df$GrLivArea
 ```
 
 2. Dependent Variable (Y)
 The dependent variable, which you want to predict, is SalePrice. This is the property's sale price in dollars and is the target variable in your regression analysis. As you aim to predict the sale price based on other variables, it is appropriate to define it as Y:
 ```{r}
-Y <- test_df$SalePrice
+Y <- train_df$SalePrice
+```
+
+```{r}
+# Scatter plot to examine the relationship
+plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
+
+# Fit initial model
+model <- lm(SalePrice ~ GrLivArea, data=train_df)
+summary(model)
+
+# Check residuals
+plot(model$residuals, main="Residuals of Model", ylab="Residuals", xlab="Index")
+hist(model$residuals, main="Histogram of Residuals", xlab="Residuals", breaks=30)
+
+```
+
+Probability.   Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  In addition, make a table of counts as shown below.
+
+a.  P(X>x | Y>y)		b.  P(X>x, Y>y)		c.  P(X<x | Y>y)		
+
+```{r}
+# X <- train_df$GrLivArea
+# Y <- train_df$SalePrice
+
+# Load your data
+# train_df <- read.csv("path/to/your/data.csv")
+
+# Step 1: Calculate quartiles
+x_3rd_quartile <- quantile(X, 0.75)
+y_2nd_quartile <- quantile(Y, 0.5)
+
+# Step 2: Create flags
+train_df$X_gt_x <- ifelse(X > x_3rd_quartile, 1, 0)
+train_df$Y_gt_y <- ifelse(Y > y_2nd_quartile, 1, 0)
+
+# Step 3: Build contingency table
+table <- table(train_df$X_gt_x, train_df$Y_gt_y)
+print(table)
+
+# Step 4: Calculate probabilities
+# P(X > x | Y > y)
+p_X_gt_x_given_Y_gt_y <- table[2, 2] / sum(table[, 2])
+
+# P(X > x, Y > y)
+p_X_gt_x_and_Y_gt_y <- table[2, 2] / sum(table)
+
+# P(X < x | Y > y)
+p_X_lt_x_given_Y_gt_y <- table[1, 2] / sum(table[, 2])
+
+# Print probabilities
+# print(paste("x_3rd_quartile:", x_3rd_quartile))
+# print(paste("y_2nd_quartile:", y_2nd_quartile))
+print(paste("P(X > x | Y > y):", p_X_gt_x_given_Y_gt_y))
+print(paste("P(X > x, Y > y):", p_X_gt_x_and_Y_gt_y))
+print(paste("P(X < x | Y > y):", p_X_lt_x_given_Y_gt_y))
+
+```
+
+```{r}
+# Assuming train_df is your correct data frame
+library(dplyr)
+
+# Calculate quartiles
+x_3rd_quartile <- quantile(train_df$GrLivArea, 0.75, na.rm = TRUE)
+y_2nd_quartile <- quantile(train_df$SalePrice, 0.5, na.rm = TRUE)
+
+# Add classifications based on quartiles
+train_df <- train_df %>%
+  mutate(
+    X_class = if_else(GrLivArea <= x_3rd_quartile, "<=3d quartile", ">3d quartile"),
+    Y_class = if_else(SalePrice <= y_2nd_quartile, "<=2d quartile", ">2d quartile")
+  )
+
+# Build contingency table
+contingency_table <- table(train_df$X_class, train_df$Y_class)
+
+# Adding row and column totals
+contingency_table <- addmargins(contingency_table)
+
+# Display the contingency table
+print(contingency_table)
+
 ```
