@@ -13,11 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(readr)
+library(ggplot2)
 ```
 
 ```{r}
 train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/train.csv')
-train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
+test_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
 ```
 
 ```{r}
@@ -68,7 +69,8 @@ hist(model$residuals, main="Histogram of Residuals", xlab="Residuals", breaks=30
 
 ```
 
-Probability.   Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  In addition, make a table of counts as shown below.
+**Probability.**  
+Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  In addition, make a table of counts as shown below.
 
 a.  P(X>x | Y>y)		b.  P(X>x, Y>y)		c.  P(X<x | Y>y)		
 
@@ -133,5 +135,96 @@ contingency_table <- addmargins(contingency_table)
 
 # Display the contingency table
 print(contingency_table)
+
+```
+
+Does splitting the training data in this fashion make them independent?  
+- Let A be the new variable counting those observations above the 3d quartile for X,  
+- and let B be the new variable counting those observations above the 2d quartile for Y.  
+
+Does P(A|B)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.
+
+**Mathematical Check of Independence**
+```{r}
+A <- 365
+B <- 728
+total_ob <- 1460
+
+P_A <- A/total_ob
+P_B <- B/total_ob
+
+# to calculate P(A|B) we need P(A∩B) that both A and B are true and divide it by P(B)
+P_A_B <- 315/total_ob
+
+# now P(A|B)
+P_A_given_B <- P_A_B/P_B
+
+P_A_time_P_B <- P_A * P_B
+
+# Print the results
+cat("P(A):", P_A, "\n")
+cat("P(B):", P_B, "\n")
+cat("P(A|B):", P_A_given_B, "\n")
+cat("P(A) * P(B):", P_A_time_P_B, "\n")
+```
+P(A|B): 0.4326923 =! P(A) * P(B): 0.1246575 this suggests that events A and B are not independent.
+
+**Chi-squared test of independence**
+
+```{r}
+chi_square_test <- chisq.test(contingency_table)
+
+chi_square_test
+```
+p-value < 0.05: The p-value is significantly less than 0.05, which mean we reject the null hypothesis of A and B being dependent.  
+
+In conclusions: Splitting the data by quartiles in this manner does not make the variables GrLivArea and SalePrice independent. Both the mathematical check and the Chi-Square test confirm that there is a significant association between these variables.
+
+**Descriptive and Inferential Statistics.**  
+Provide univariate descriptive statistics and appropriate plots for the training data set.  
+
+```{r}
+summary(train_df)
+
+# defining some continuous variables for visualization
+cont_vars <- c("GrLivArea", "SalePrice", "LotArea", "TotalBsmtSF", "X1stFlrSF", "GarageArea")
+
+# Histograms for continuous variables
+for (var in cont_vars) {
+  hist(train_df[[var]], main = paste("Histogram of", var), xlab = var, col = "blue", border = "black")
+}
+
+# defining some categorical variables for visualization
+cat_vars <- c("MSZoning", "Street", "LotShape", "Neighborhood", "BldgType")
+
+# Bar plots for categorical variables
+for (var in categorical_vars) {
+  barplot(table(train_df[[var]]), main = paste("Bar Plot of", var), xlab = var, col = "purple", border = "black")
+}
+```
+Provide a scatterplot of X and Y.  
+
+```{r}
+# scatter plot for X and Y from the first part
+plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
+
+```
+Provide a 95% CI for the difference in the mean of the variables.  
+```{r}
+
+```
+
+Derive a correlation matrix for two of the quantitative variables you selected.  
+```{r}
+
+```
+
+Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.  
+```{r}
+
+```
+
+Discuss the meaning of your analysis.  
+```{r}
 
 ```
