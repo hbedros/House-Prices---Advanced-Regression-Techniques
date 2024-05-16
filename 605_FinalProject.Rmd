@@ -13,7 +13,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(readr)
+library(e1071)
 library(ggplot2)
+library(dplyr)
 ```
 
 ```{r}
@@ -34,8 +36,6 @@ Among your dataset fields, a good choice for a quantitative independent variable
 
 But first, let's check if it's right skewed:
 ```{r}
-library(e1071)
-
 # Calculate skewness
 skewness_grlivarea <- skewness(train_df$GrLivArea)
 
@@ -176,12 +176,12 @@ chi_square_test <- chisq.test(contingency_table)
 
 chi_square_test
 ```
-p-value < 0.05: The p-value is significantly less than 0.05, which mean we reject the null hypothesis of A and B being dependent.  
+**p-value < 0.05:** The p-value is significantly less than 0.05, which mean we reject the null hypothesis of A and B being dependent.  
 
-In conclusions: Splitting the data by quartiles in this manner does not make the variables GrLivArea and SalePrice independent. Both the mathematical check and the Chi-Square test confirm that there is a significant association between these variables.
+**In conclusions:** Splitting the data by quartiles in this manner does not make the variables GrLivArea and SalePrice independent. Both the mathematical check and the Chi-Square test confirm that there is a significant association between these variables.
 
 **Descriptive and Inferential Statistics.**  
-Provide univariate descriptive statistics and appropriate plots for the training data set.  
+**Provide univariate descriptive statistics and appropriate plots for the training data set.**    
 
 ```{r}
 summary(train_df)
@@ -198,33 +198,214 @@ for (var in cont_vars) {
 cat_vars <- c("MSZoning", "Street", "LotShape", "Neighborhood", "BldgType")
 
 # Bar plots for categorical variables
-for (var in categorical_vars) {
+for (var in cat_vars) {
   barplot(table(train_df[[var]]), main = paste("Bar Plot of", var), xlab = var, col = "purple", border = "black")
 }
 ```
-Provide a scatterplot of X and Y.  
+**Provide a scatterplot of X and Y.**    
 
 ```{r}
 # scatter plot for X and Y from the first part
 plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
 
 ```
-Provide a 95% CI for the difference in the mean of the variables.  
+**Provide a 95% CI for the difference in the mean of the variables.**    
 ```{r}
+# Assuming train_df is your training dataset
+# GrLivArea, SalePrice
+
+# Compute means and standard deviations
+mean_GrLivArea <- mean(train_df$GrLivArea, na.rm = TRUE)
+# mean_GarageArea <- mean(train_df$GarageArea, na.rm = TRUE)
+mean_SalePrice <- mean(train_df$SalePrice, na.rm = TRUE)
+
+sd_GrLivArea <- sd(train_df$GrLivArea, na.rm = TRUE)
+# sd_GarageArea <- sd(train_df$GarageArea, na.rm = TRUE)
+sd_SalePrice <- sd(train_df$SalePrice, na.rm = TRUE)
+
+# Number of observations
+n_GrLivArea <- sum(!is.na(train_df$GrLivArea))
+n_SalePrice<- sum(!is.na(train_df$SalePrice))
+
+# Compute the standard error of the difference
+se_diff <- sqrt((sd_GrLivArea^2 / n_GrLivArea) + (sd_SalePrice^2 / n_SalePrice))
+
+# Degrees of freedom (approximation)
+df <- min(n_GrLivArea - 1, n_SalePrice - 1)
+
+# Critical value for 95% CI from t-distribution
+t_crit <- qt(0.975, df)
+
+# Compute the margin of error
+margin_of_error <- t_crit * se_diff
+
+# Compute the difference in means
+diff_means <- mean_GrLivArea - mean_SalePrice
+
+# Compute the 95% confidence interval
+lower_bound <- diff_means - margin_of_error
+upper_bound <- diff_means + margin_of_error
+
+# Print the results
+cat("Mean of GrLivArea:", mean_GrLivArea, "\n")
+cat("Mean of SalePrice:", mean_SalePrice, "\n")
+cat("Difference in means:", diff_means, "\n")
+cat("95% Confidence Interval for the difference in means: [", lower_bound, ",", upper_bound, "]\n")
 
 ```
 
-Derive a correlation matrix for two of the quantitative variables you selected.  
+**Derive a correlation matrix for two of the quantitative variables you selected.**    
 ```{r}
+# Select the two quantitative variables
+variables <- train_df %>% select(GrLivArea, SalePrice)
+
+# Compute the correlation matrix
+correlation_matrix <- cor(variables, use = "complete.obs")
+
+# Print the correlation matrix
+print(correlation_matrix)
 
 ```
 
-Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.  
+**Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.**    
 ```{r}
+# H0 The correlation between GrLivArea and SalePrice is 0
+# Ha The correlation between GrLivArea and SalePrice is NOT 0
+
+# Perform the correlation test
+cor_test <- cor.test(train_df$GrLivArea, train_df$SalePrice, conf.level = 0.99)
+
+# Extract the correlation coefficient, p-value, and confidence interval
+correlation_coefficient <- cor_test$estimate
+p_value <- cor_test$p.value
+conf_interval <- cor_test$conf.int
+
+# Print the results
+cat("Correlation Coefficient:", correlation_coefficient, "\n")
+cat("P-value:", p_value, "\n")
+cat("99% Confidence Interval:", conf_interval, "\n")
+
 
 ```
 
-Discuss the meaning of your analysis.  
+**Discuss the meaning of your analysis.**    
+
+**Correlation Coefficient: 0.7086245**  
+
+- There is a strong positive linear relationship between GrLivArea and SalePrice. This means that as the above-grade living area increases, the sale price tends to increase as well.  
+
+**P-value: 4.518034e-223**  
+
+- The p-value is extremely small (essentially zero), much smaller than the typical significance level (e.g., 0.01 for a 99% confidence interval).  
+- This indicates that the correlation is highly statistically significant. We reject the null hypothesis that the correlation between GrLivArea and SalePrice is zero.  
+
+**99% Confidence Interval: [0.6733974, 0.7406408]**  
+
+- We are 99% confident that the true correlation coefficient lies between 0.6733974 and 0.7406408.  
+- This range indicates a strong positive correlation, reaffirming the strength of the relationship between the two variables.  
+
+**Conclusion**
+Based on the results from the correlation test and the confidence interval:  
+
+- There is a strong, statistically significant positive correlation between the living area above grade (GrLivArea) and the sale price (SalePrice).  
+- The 99% confidence interval for the correlation coefficient is [0.6733974, 0.7406408], indicating a strong and reliable positive relationship between these variables.  
+
+**Linear Algebra and Correlation.**  
+Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.)  
 ```{r}
+# First, we calculate the correlation matrix for GrLivArea and SalePrice. Then, we invert this matrix and extract the diagonal elements (VIFs).
+
+# Select the two quantitative variables
+variables <- train_df %>% select(GrLivArea, SalePrice)
+
+# Compute the correlation matrix
+correlation_matrix <- cor(variables, use = "complete.obs")
+
+# Invert the correlation matrix to obtain the precision matrix
+precision_matrix <- solve(correlation_matrix)
+
+# Extract the diagonal elements (VIFs)
+vifs <- diag(precision_matrix)
+
+# Print the results
+cat("Correlation Matrix:\n")
+print(correlation_matrix)
+cat("\nPrecision Matrix (Inverse of Correlation Matrix):\n")
+print(precision_matrix)
+cat("\nVariance Inflation Factors (VIFs):\n")
+print(vifs)
 
 ```
+**Interpretation**  
+- The correlation matrix shows a strong positive correlation of 0.7086245 between GrLivArea and SalePrice. This indicates that as the above-grade living area increases, the sale price tends to increase as well.
+
+- The precision matrix (inverse of the correlation matrix) has diagonal elements greater than 1 (2.008632), which is typical when there's some collinearity. The off-diagonal elements are negative, reflecting the inverse relationship within the context of the precision matrix. 
+
+- VIFs: Both GrLivArea and SalePrice have a VIF of approximately 2.008632.
+A VIF value close to 1 suggests low collinearity, while higher values indicate more severe collinearity. In this case, a VIF of 2.008632 indicates moderate collinearity. This means that there is some multicollinearity between GrLivArea and SalePrice, but it is not severe. 
+
+
+Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix.  
+```{r}
+# Multiplying the correlation matrix by the precision matrix (its inverse) and then the precision matrix by the correlation matrix should both yield the identity matrix, as the precision matrix is the inverse of the correlation matrix.
+
+# Invert the correlation matrix to obtain the precision matrix
+precision_matrix <- solve(correlation_matrix)
+
+# Multiply correlation matrix by precision matrix
+identity_matrix_1 <- correlation_matrix %*% precision_matrix
+
+# Multiply precision matrix by correlation matrix
+identity_matrix_2 <- precision_matrix %*% correlation_matrix
+
+# Print the results
+cat("Correlation Matrix:\n")
+print(correlation_matrix)
+cat("\nPrecision Matrix (Inverse of Correlation Matrix):\n")
+print(precision_matrix)
+cat("\nCorrelation Matrix * Precision Matrix:\n")
+print(identity_matrix_1)
+cat("\nPrecision Matrix * Correlation Matrix:\n")
+print(identity_matrix_2)
+
+```
+The strong positive correlation (0.7086245) between GrLivArea and SalePrice indicates that larger living areas are associated with higher sale prices. The variance inflation factors (VIFs) around 2.008632 suggest moderate collinearity. Matrix multiplications confirm the precision matrix as the correct inverse of the correlation matrix.
+
+
+Conduct principle components analysis (research this!)  and interpret.  Discuss.  
+```{r}
+# PCA
+
+# We will perform PCA on GrLivArea and SalePrice from train_df.
+# Load necessary library
+library(stats)
+library(ggbiplot)
+library(ggplot2)
+
+# Perform PCA
+pca_result <- prcomp(variables, scale. = TRUE)
+
+# Summary of PCA
+summary(pca_result)
+
+# Print PCA loadings
+pca_result$rotation
+
+# Print PCA scores
+pca_result$x
+
+# Plot PCA
+library(ggplot2)
+biplot(pca_result)
+
+```
+Interpretation:
+
+- The first principal component (PC1) captures 85.43% of the total variance in the data, which means it represents the most significant trend or pattern in the dataset.   
+
+- The second principal component (PC2) captures the remaining 14.57% of the variance, indicating that it captures a secondary trend or pattern.  
+
+- Both GrLivArea and SalePrice contribute equally to PC1, and the negative signs indicate that as PC1 increases, both GrLivArea and SalePrice decrease. This suggests that PC1 captures the overall scale of the properties, where larger values (in absolute terms) of PC1 correspond to properties with larger living areas and higher sale prices.  
+- For PC2, GrLivArea and SalePrice have opposite signs. This means that PC2 captures the contrast between GrLivArea and SalePrice. Higher PC2 scores indicate properties with relatively larger living areas but lower sale prices, and vice versa.  
+
+- The PCA biplot shows that GrLivArea and SalePrice both contribute equally to the primary trend (PC1), representing a combined measure of property size and value, while PC2 highlights the inverse relationship between them, indicating differences between properties with larger living areas but relatively lower prices and vice versa. The cluster of points around the center suggests that most properties have similar characteristics in terms of their living area and sale price, with a few properties showing variations as indicated by their spread along the principal components.    
