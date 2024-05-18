@@ -16,6 +16,7 @@ library(readr)
 library(e1071)
 library(ggplot2)
 library(dplyr)
+library(caret)
 ```
 
 ```{r}
@@ -409,3 +410,162 @@ Interpretation:
 - For PC2, GrLivArea and SalePrice have opposite signs. This means that PC2 captures the contrast between GrLivArea and SalePrice. Higher PC2 scores indicate properties with relatively larger living areas but lower sale prices, and vice versa.  
 
 - The PCA biplot shows that GrLivArea and SalePrice both contribute equally to the primary trend (PC1), representing a combined measure of property size and value, while PC2 highlights the inverse relationship between them, indicating differences between properties with larger living areas but relatively lower prices and vice versa. The cluster of points around the center suggests that most properties have similar characteristics in terms of their living area and sale price, with a few properties showing variations as indicated by their spread along the principal components.    
+
+**Calculus-Based Probability & Statistics.**  
+Many times, it makes sense to fit a closed form distribution to data.
+
+For your variable that is skewed to the right, shift it so that the minimum value is above zero.
+Then load the MASS package and run fitdistr to fit an exponential probability density function.
+
+```{r}
+library(MASS)
+skewness_grlivarea
+
+# Shift the data so that the minimum value is above zero
+shifted_GrLivArea <- train_df$GrLivArea - min(train_df$GrLivArea) + 1
+
+# Use fitdistr to fit an exponential distribution
+fit <- fitdistr(shifted_GrLivArea, "exponential")
+
+# Print the fitted parameters
+print(fit)
+```
+
+Interpretation:  
+- Rate Parameter (λ): The fitted rate parameter (e.g., 8.456919e-04) of the exponential distribution.
+- Standard Error: The standard error of the estimated parameter (e.g., 2.213277e-05).
+
+This fitted exponential distribution can be used to model the distribution of the shifted GrLivArea data. The rate parameter indicates the expected rate of occurrence for the values in the data. The exponential distribution is characterized by a constant hazard rate, which in this context can help in understanding the distribution pattern of the GrLivArea variable after the shift.
+
+Find the optimal value of λ for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, λ)).
+```{r}
+# Extract the optimal value of lambda
+lambda <- fit$estimate
+cat("Optimal value of λ:", lambda, "\n")
+
+# Generate 1000 samples from the exponential distribution using the fitted λ
+samples <- rexp(1000, rate = lambda)
+
+# Print the first few samples to verify
+print(head(samples))
+
+```
+
+Plot a histogram and compare it with a histogram of your original variable.
+```{r}
+# Plot histograms
+par(mfrow = c(1, 2))  # Set up a plotting area with 2 plots side by side
+
+# Histogram of the original shifted data
+hist(shifted_GrLivArea, breaks = 30, main = "Histogram of Shifted GrLivArea",
+     xlab = "Shifted GrLivArea", col = "blue", border = "black", probability = TRUE)
+lines(density(shifted_GrLivArea), col = "red", lwd = 2)  # Add a density line
+
+# Histogram of the generated samples
+hist(samples, breaks = 30, main = "Histogram of Generated Samples",
+     xlab = "Generated Samples", col = "green", border = "black", probability = TRUE)
+lines(density(samples), col = "red", lwd = 2)
+```
+
+**Comparison**  
+
+- The histograms and density lines show a good visual match between the shifted original data and the generated samples, indicating that the exponential distribution is a reasonable fit for the right-skewed GrLivArea data.  
+
+- The right skew and the overall shape of both distributions are similar, supporting the use of the exponential distribution to model the GrLivArea variable.  
+
+Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).
+```{r}
+
+# Calculate the 5th and 95th percentiles
+percentile_5th <- qexp(0.05, rate = lambda)
+percentile_95th <- qexp(0.95, rate = lambda)
+
+# Print the percentiles
+cat("5th percentile:", percentile_5th, "\n")
+cat("95th percentile:", percentile_95th, "\n")
+
+```
+
+
+Also generate a 95% confidence interval from the empirical data, assuming normality.
+```{r}
+
+# Calculate the sample mean and standard deviation
+sample_mean <- mean(shifted_GrLivArea)
+sample_sd <- sd(shifted_GrLivArea)
+n <- length(shifted_GrLivArea)  # Sample size
+
+# Calculate the t-critical value for a 95% confidence interval
+alpha <- 0.05
+t_critical <- qt(1 - alpha / 2, df = n - 1)
+
+# Calculate the margin of error
+margin_of_error <- t_critical * (sample_sd / sqrt(n))
+
+# Calculate the 95% confidence interval
+ci_lower <- sample_mean - margin_of_error
+ci_upper <- sample_mean + margin_of_error
+
+# Print the confidence interval
+cat("95% Confidence Interval: [", ci_lower, ", ", ci_upper, "]\n")
+
+```
+
+Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
+```{r}
+# Calculate the 5th and 95th percentiles
+percentile_5th_empirical <- quantile(shifted_GrLivArea, 0.05)
+percentile_95th_empirical <- quantile(shifted_GrLivArea, 0.95)
+
+# Print the percentiles
+cat("Empirical 5th percentile:", percentile_5th_empirical, "\n")
+cat("Empirical 95th percentile:", percentile_95th_empirical, "\n")
+
+```
+
+**Interpretation of Empirical Percentiles**
+
+- Empirical 5th Percentile (515): Indicates that 5% of the properties have a GrLivArea below 515, showing the lower bound for typical property sizes.  
+
+- Empirical 95th Percentile (2133.1): Indicates that 95% of the properties have a GrLivArea below 2133.1, showing the upper bound for typical property sizes.  
+
+- Comparison: The empirical percentiles differ significantly from the theoretical percentiles (52.68 and 3523.99), suggesting the exponential model does not perfectly fit the data. The empirical data is more concentrated within a specific range.
+
+**Modeling.**
+Build some type of regression  model and submit your model to the competition board. 
+Provide your complete model summary and results with analysis. 
+Report your Kaggle.com  user name and score.
+
+```{r}
+# Log transform the skewed variables
+train_df$SalePrice <- log(train_df$SalePrice)
+train_df$GrLivArea <- log(train_df$GrLivArea)
+test_df$GrLivArea <- log(test_df$GrLivArea)
+
+# Select relevant features for the model using base R syntax
+train_data <- train_df[, c("SalePrice", "GrLivArea", "OverallQual", "YearBuilt", "TotalBsmtSF", "GarageCars", "FullBath", "TotRmsAbvGrd", 
+                           "YearRemodAdd", "BsmtFinSF1", "X1stFlrSF", "X2ndFlrSF", "Fireplaces")]
+test_data <- test_df[, c("Id", "GrLivArea", "OverallQual", "YearBuilt", "TotalBsmtSF", "GarageCars", "FullBath", "TotRmsAbvGrd", 
+                         "YearRemodAdd", "BsmtFinSF1", "X1stFlrSF", "X2ndFlrSF", "Fireplaces")]
+
+# Impute missing values using median imputation
+preProcValues <- preProcess(train_data, method = c("medianImpute"))
+train_data <- predict(preProcValues, train_data)
+test_data <- predict(preProcValues, test_data)
+
+# Build the linear regression model
+model <- lm(SalePrice ~ ., data = train_data)
+
+# Summary of the model
+summary(model)
+
+# Make predictions on the test dataset
+predictions <- exp(predict(model, newdata = test_data))  # Inverse of log transformation
+
+# Prepare the submission file, ensuring all Ids are included
+submission <- data.frame(Id = test_df$Id, SalePrice = predictions)
+write.csv(submission, file = "haig_bedros_605_finals_submission.csv", row.names = FALSE)
+
+# Print a message indicating completion
+cat("Model built and submission file created.\n")
+```
