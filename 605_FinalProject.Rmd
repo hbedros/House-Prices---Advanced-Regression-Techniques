@@ -1,61 +1,76 @@
 ---
-title: "DATA605_Final"
+title: "DATA605 Final Project"
 author: "Haig Bedros"
 date: "2024-05-13"
-output: html_document
+output:
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+  pdf_document: default
+editor_options:
+  chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-### House Prices - Advanced Regression Techniques 
-
-```{r}
+```{r global-options, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, message = FALSE, warning = FALSE)
 library(readr)
 library(e1071)
 library(ggplot2)
 library(dplyr)
 library(caret)
+library(stats)
+library(ggbiplot)
+library(MASS)
 ```
 
+# House Prices - Advanced Regression Techniques
+
+## Loading the training and test datasets
 ```{r}
 train_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/train.csv')
 test_df <- read.csv('https://raw.githubusercontent.com/hbedros/House-Prices---Advanced-Regression-Techniques/main/data/test.csv')
 ```
 
+## A quick glance on the training dataset
 ```{r}
 head(train_df)
 ```
 
-1. Pick one of the quanititative independent variables from the training data set (train.csv) , and define that variable as  X.   
-2. Make sure this variable is skewed to the right!  
-3. Pick the dependent variable and define it as  Y.
+## 1. Selecting Analysis Variables
 
-1. Quantitative Independent Variable (X)
-Among your dataset fields, a good choice for a quantitative independent variable (predictor) is GrLivArea. This variable represents the above grade (ground) living area in square feet. This is a continuous variable and is likely to have a linear relationship with the property’s sale price, making it a suitable candidate for regression analysis. Let's define it as X:
+### 1.1 Quantitative Independent Variable (X) and its right skeweness
 
-But first, let's check if it's right skewed:
+A good choice for a quantitative independent variable (predictor) is GrLivArea. This variable represents the ground living area in square feet. This is a continuous variable and is likely to have a linear relationship with the property’s sale price, making it a suitable candidate for our regression analysis.
+
+But first, let's check if it's right skewed:  
 ```{r}
-# Calculate skewness
+# Calculating skewness
 skewness_grlivarea <- skewness(train_df$GrLivArea)
 
 skewness_grlivarea
 ```
+The skewness of `GrLivArea` is approximately 1.13, it already exhibits right skewness.  
 
 ```{r}
-# the skewness of GrLivArea is approximately 1.13, it already exhibits right skewness.
-
-# defining X variable
+# Defining X variable
 X <- train_df$GrLivArea
 ```
 
-2. Dependent Variable (Y)
-The dependent variable, which you want to predict, is SalePrice. This is the property's sale price in dollars and is the target variable in your regression analysis. As you aim to predict the sale price based on other variables, it is appropriate to define it as Y:
+### 1.2 Selecting the dependent variable (Y)  
+
+The dependent variable, which we want to predict, is `SalePrice`. This is the property's sale price in dollars and is the target variable in our regression analysis.  
+
+We aim to predict the sale price based on other variables and we will define it as Y:  
 ```{r}
 Y <- train_df$SalePrice
 ```
 
+### 1.3 plotting the relationship between X and Y variables
 ```{r}
 # Scatter plot to examine the relationship
 plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
@@ -70,82 +85,70 @@ hist(model$residuals, main="Histogram of Residuals", xlab="Residuals", breaks=30
 
 ```
 
-**Probability.**  
-Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  In addition, make a table of counts as shown below.
+## 2. Probability  
 
-a.  P(X>x | Y>y)		b.  P(X>x, Y>y)		c.  P(X<x | Y>y)		
+### 2.1 Probability Calculating Excersices and Creating a Table of Counts  
 
+**Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 2d quartile of the Y variable.  Interpret the meaning of all probabilities.  In addition, make a table of counts as shown below.**  
+
+**a.  P(X>x | Y>y)		b.  P(X>x, Y>y)		c.  P(X<x | Y>y)**		
 ```{r}
 # X <- train_df$GrLivArea
 # Y <- train_df$SalePrice
 
-# Load your data
-# train_df <- read.csv("path/to/your/data.csv")
-
-# Step 1: Calculate quartiles
+# Quartiles
 x_3rd_quartile <- quantile(X, 0.75)
 y_2nd_quartile <- quantile(Y, 0.5)
 
-# Step 2: Create flags
 train_df$X_gt_x <- ifelse(X > x_3rd_quartile, 1, 0)
 train_df$Y_gt_y <- ifelse(Y > y_2nd_quartile, 1, 0)
 
-# Step 3: Build contingency table
+# Table of counts
 table <- table(train_df$X_gt_x, train_df$Y_gt_y)
 print(table)
 
-# Step 4: Calculate probabilities
-# P(X > x | Y > y)
+# Probabilities:
+# a. P(X > x | Y > y)
 p_X_gt_x_given_Y_gt_y <- table[2, 2] / sum(table[, 2])
 
-# P(X > x, Y > y)
+# b. P(X > x, Y > y)
 p_X_gt_x_and_Y_gt_y <- table[2, 2] / sum(table)
 
-# P(X < x | Y > y)
+# c. P(X < x | Y > y)
 p_X_lt_x_given_Y_gt_y <- table[1, 2] / sum(table[, 2])
 
-# Print probabilities
-# print(paste("x_3rd_quartile:", x_3rd_quartile))
-# print(paste("y_2nd_quartile:", y_2nd_quartile))
-print(paste("P(X > x | Y > y):", p_X_gt_x_given_Y_gt_y))
-print(paste("P(X > x, Y > y):", p_X_gt_x_and_Y_gt_y))
-print(paste("P(X < x | Y > y):", p_X_lt_x_given_Y_gt_y))
-
+print(paste("a. P(X > x | Y > y):", p_X_gt_x_given_Y_gt_y))
+print(paste("b. P(X > x, Y > y):", p_X_gt_x_and_Y_gt_y))
+print(paste("c. P(X < x | Y > y):", p_X_lt_x_given_Y_gt_y))
 ```
-
+**Table of Counts:**  
 ```{r}
-# Assuming train_df is your correct data frame
-library(dplyr)
-
 # Calculate quartiles
 x_3rd_quartile <- quantile(train_df$GrLivArea, 0.75, na.rm = TRUE)
 y_2nd_quartile <- quantile(train_df$SalePrice, 0.5, na.rm = TRUE)
 
-# Add classifications based on quartiles
+# Classifications based on quartiles
 train_df <- train_df %>%
   mutate(
     X_class = if_else(GrLivArea <= x_3rd_quartile, "<=3d quartile", ">3d quartile"),
     Y_class = if_else(SalePrice <= y_2nd_quartile, "<=2d quartile", ">2d quartile")
   )
 
-# Build contingency table
-contingency_table <- table(train_df$X_class, train_df$Y_class)
-
-# Adding row and column totals
-contingency_table <- addmargins(contingency_table)
-
-# Display the contingency table
-print(contingency_table)
+# Table of Counts
+counts_table <- table(train_df$X_class, train_df$Y_class)
+counts_table <- addmargins(counts_table)
+print(counts_table)
 
 ```
+### 2.2 Independence Analysis of Quartile-Based Splitting
 
-Does splitting the training data in this fashion make them independent?  
-- Let A be the new variable counting those observations above the 3d quartile for X,  
-- and let B be the new variable counting those observations above the 2d quartile for Y.  
+**Does splitting the training data in this fashion make them independent?**  
+- **Let A be the new variable counting those observations above the 3d quartile for X,**  
+- **and let B be the new variable counting those observations above the 2d quartile for Y.**  
 
-Does P(A|B)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.
+**Does P(A|B)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.**  
 
-**Mathematical Check of Independence**
+#### 2.2.1 *Mathematical Check of Independence:*
 ```{r}
 A <- 365
 B <- 728
@@ -162,31 +165,28 @@ P_A_given_B <- P_A_B/P_B
 
 P_A_time_P_B <- P_A * P_B
 
-# Print the results
 cat("P(A):", P_A, "\n")
 cat("P(B):", P_B, "\n")
 cat("P(A|B):", P_A_given_B, "\n")
 cat("P(A) * P(B):", P_A_time_P_B, "\n")
-```
-P(A|B): 0.4326923 =! P(A) * P(B): 0.1246575 this suggests that events A and B are not independent.
+``` 
+- P(A|B): 0.4326923 ≠ P(A) * P(B): 0.1246575 this suggests that events A and B are not independent.
 
-**Chi-squared test of independence**
-
+#### 2.2.2 *Chi-squared test of independence:*
 ```{r}
-chi_square_test <- chisq.test(contingency_table)
+chi_square_test <- chisq.test(counts_table)
 
 chi_square_test
 ```
-**p-value < 0.05:** The p-value is significantly less than 0.05, which mean we reject the null hypothesis of A and B being dependent.  
+- p-value < 0.05: The p-value is significantly less than 0.05, which mean we reject the null hypothesis of A and B being dependent. 
 
-**In conclusions:** Splitting the data by quartiles in this manner does not make the variables GrLivArea and SalePrice independent. Both the mathematical check and the Chi-Square test confirm that there is a significant association between these variables.
+#### 2.2.3 *Conclusions:*  
+Splitting the data by quartiles does not make the variables GrLivArea and SalePrice independent. Both the mathematical check and the Chi-Square test confirm that there is a significant association between these variables.
 
-**Descriptive and Inferential Statistics.**  
-**Provide univariate descriptive statistics and appropriate plots for the training data set.**    
+## 3. Descriptive and Inferential Statistics
 
+### 3.1 Univariate descriptive statistics and appropriate plots for the training data set    
 ```{r}
-summary(train_df)
-
 # defining some continuous variables for visualization
 cont_vars <- c("GrLivArea", "SalePrice", "LotArea", "TotalBsmtSF", "X1stFlrSF", "GarageArea")
 
@@ -203,70 +203,67 @@ for (var in cat_vars) {
   barplot(table(train_df[[var]]), main = paste("Bar Plot of", var), xlab = var, col = "purple", border = "black")
 }
 ```
-**Provide a scatterplot of X and Y.**    
+
+#### Scatterplot of X and Y  
 
 ```{r}
 # scatter plot for X and Y from the first part
 plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
 
 ```
-**Provide a 95% CI for the difference in the mean of the variables.**    
-```{r}
-# Assuming train_df is your training dataset
-# GrLivArea, SalePrice
 
-# Compute means and standard deviations
+#### 95% CI for the difference in the mean of the variables   
+
+```{r}
+# Means and Standard deviations
 mean_GrLivArea <- mean(train_df$GrLivArea, na.rm = TRUE)
-# mean_GarageArea <- mean(train_df$GarageArea, na.rm = TRUE)
 mean_SalePrice <- mean(train_df$SalePrice, na.rm = TRUE)
 
 sd_GrLivArea <- sd(train_df$GrLivArea, na.rm = TRUE)
-# sd_GarageArea <- sd(train_df$GarageArea, na.rm = TRUE)
 sd_SalePrice <- sd(train_df$SalePrice, na.rm = TRUE)
 
 # Number of observations
 n_GrLivArea <- sum(!is.na(train_df$GrLivArea))
 n_SalePrice<- sum(!is.na(train_df$SalePrice))
 
-# Compute the standard error of the difference
+# Standard error of the difference
 se_diff <- sqrt((sd_GrLivArea^2 / n_GrLivArea) + (sd_SalePrice^2 / n_SalePrice))
 
-# Degrees of freedom (approximation)
+# Degrees of freedom
 df <- min(n_GrLivArea - 1, n_SalePrice - 1)
 
-# Critical value for 95% CI from t-distribution
+# 95% CI
 t_crit <- qt(0.975, df)
 
-# Compute the margin of error
+# Margin of error
 margin_of_error <- t_crit * se_diff
 
-# Compute the difference in means
+# Difference in means
 diff_means <- mean_GrLivArea - mean_SalePrice
 
-# Compute the 95% confidence interval
+# 95% confidence interval
 lower_bound <- diff_means - margin_of_error
 upper_bound <- diff_means + margin_of_error
 
-# Print the results
 cat("Mean of GrLivArea:", mean_GrLivArea, "\n")
 cat("Mean of SalePrice:", mean_SalePrice, "\n")
 cat("Difference in means:", diff_means, "\n")
 cat("95% Confidence Interval for the difference in means: [", lower_bound, ",", upper_bound, "]\n")
-
 ```
 
-**Derive a correlation matrix for two of the quantitative variables you selected.**    
-```{r}
-# Select the two quantitative variables
-variables <- train_df %>% select(GrLivArea, SalePrice)
+#### Derive a correlation matrix for two of the quantitative variables you selected.    
 
-# Compute the correlation matrix
+```{r}
+# Selecting our two quantitative variables
+variables <- train_df[, c("GrLivArea", "SalePrice")]
+
+# Correlation matrix
 correlation_matrix <- cor(variables, use = "complete.obs")
 
-# Print the correlation matrix
 print(correlation_matrix)
-
 ```
+
+### 3.2 Hypothesis testing  
 
 **Test the hypothesis that the correlation between these variables is 0 and provide a 99% confidence interval.**    
 ```{r}
@@ -285,81 +282,71 @@ conf_interval <- cor_test$conf.int
 cat("Correlation Coefficient:", correlation_coefficient, "\n")
 cat("P-value:", p_value, "\n")
 cat("99% Confidence Interval:", conf_interval, "\n")
-
-
 ```
 
-**Discuss the meaning of your analysis.**    
+*Discuss the meaning of your analysis.*      
 
-**Correlation Coefficient: 0.7086245**  
+*Correlation Coefficient: 0.7086245*  
 
 - There is a strong positive linear relationship between GrLivArea and SalePrice. This means that as the above-grade living area increases, the sale price tends to increase as well.  
 
-**P-value: 4.518034e-223**  
+*P-value: 4.518034e-223*  
 
 - The p-value is extremely small (essentially zero), much smaller than the typical significance level (e.g., 0.01 for a 99% confidence interval).  
 - This indicates that the correlation is highly statistically significant. We reject the null hypothesis that the correlation between GrLivArea and SalePrice is zero.  
 
-**99% Confidence Interval: [0.6733974, 0.7406408]**  
+*99% Confidence Interval: [0.6733974, 0.7406408]*  
 
 - We are 99% confident that the true correlation coefficient lies between 0.6733974 and 0.7406408.  
 - This range indicates a strong positive correlation, reaffirming the strength of the relationship between the two variables.  
 
-**Conclusion**
+*Conclusion*  
 Based on the results from the correlation test and the confidence interval:  
 
 - There is a strong, statistically significant positive correlation between the living area above grade (GrLivArea) and the sale price (SalePrice).  
 - The 99% confidence interval for the correlation coefficient is [0.6733974, 0.7406408], indicating a strong and reliable positive relationship between these variables.  
 
-**Linear Algebra and Correlation.**  
-Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.)  
+## 4 Linear Algebra and Correlation. 
+
+### 4.1 Correlation
+
+**Invert your correlation matrix. (This is known as the precision matrix and contains variance inflation factors on the diagonal.)**    
 ```{r}
-# First, we calculate the correlation matrix for GrLivArea and SalePrice. Then, we invert this matrix and extract the diagonal elements (VIFs).
-
-# Select the two quantitative variables
-variables <- train_df %>% select(GrLivArea, SalePrice)
-
-# Compute the correlation matrix
-correlation_matrix <- cor(variables, use = "complete.obs")
-
 # Invert the correlation matrix to obtain the precision matrix
 precision_matrix <- solve(correlation_matrix)
 
 # Extract the diagonal elements (VIFs)
 vifs <- diag(precision_matrix)
 
-# Print the results
+
 cat("Correlation Matrix:\n")
 print(correlation_matrix)
 cat("\nPrecision Matrix (Inverse of Correlation Matrix):\n")
 print(precision_matrix)
 cat("\nVariance Inflation Factors (VIFs):\n")
 print(vifs)
-
 ```
-**Interpretation**  
-- The correlation matrix shows a strong positive correlation of 0.7086245 between GrLivArea and SalePrice. This indicates that as the above-grade living area increases, the sale price tends to increase as well.
 
-- The precision matrix (inverse of the correlation matrix) has diagonal elements greater than 1 (2.008632), which is typical when there's some collinearity. The off-diagonal elements are negative, reflecting the inverse relationship within the context of the precision matrix. 
+*Interpretation*  
 
-- VIFs: Both GrLivArea and SalePrice have a VIF of approximately 2.008632.
-A VIF value close to 1 suggests low collinearity, while higher values indicate more severe collinearity. In this case, a VIF of 2.008632 indicates moderate collinearity. This means that there is some multicollinearity between GrLivArea and SalePrice, but it is not severe. 
+- The correlation matrix shows a strong positive correlation of 0.7086245 between GrLivArea and SalePrice. This indicates that as the above-grade living area increases, the sale price tends to increase as well.  
+
+- The precision matrix (inverse of the correlation matrix) has diagonal elements greater than 1 (2.008632), which is typical when there's some collinearity. The off-diagonal elements are negative, reflecting the inverse relationship within the context of the precision matrix.   
+
+- VIFs: Both GrLivArea and SalePrice have a VIF of approximately 2.008632.  
+
+A VIF value close to 1 suggests low collinearity, while higher values indicate more severe collinearity. In this case, a VIF of 2.008632 indicates moderate collinearity. This means that there is some multicollinearity between GrLivArea and SalePrice, but it is not severe.   
 
 
 Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix.  
 ```{r}
 # Multiplying the correlation matrix by the precision matrix (its inverse) and then the precision matrix by the correlation matrix should both yield the identity matrix, as the precision matrix is the inverse of the correlation matrix.
 
-# Invert the correlation matrix to obtain the precision matrix
 precision_matrix <- solve(correlation_matrix)
 
-# Multiply correlation matrix by precision matrix
 identity_matrix_1 <- correlation_matrix %*% precision_matrix
-
-# Multiply precision matrix by correlation matrix
 identity_matrix_2 <- precision_matrix %*% correlation_matrix
 
-# Print the results
 cat("Correlation Matrix:\n")
 print(correlation_matrix)
 cat("\nPrecision Matrix (Inverse of Correlation Matrix):\n")
@@ -368,39 +355,29 @@ cat("\nCorrelation Matrix * Precision Matrix:\n")
 print(identity_matrix_1)
 cat("\nPrecision Matrix * Correlation Matrix:\n")
 print(identity_matrix_2)
-
 ```
-The strong positive correlation (0.7086245) between GrLivArea and SalePrice indicates that larger living areas are associated with higher sale prices. The variance inflation factors (VIFs) around 2.008632 suggest moderate collinearity. Matrix multiplications confirm the precision matrix as the correct inverse of the correlation matrix.
 
+The strong positive correlation (0.7086245) between GrLivArea and SalePrice indicates that larger living areas are associated with higher sale prices. The variance inflation factors (VIFs) around 2.008632 suggest moderate collinearity. Matrix multiplications confirm the precision matrix as the correct inverse of the correlation matrix.  
 
-Conduct principle components analysis (research this!)  and interpret.  Discuss.  
+### 4.2 Principle Components Analysis (PSA)
+
+**Conduct principle components analysis (research this!)  and interpret.  Discuss.**  
 ```{r}
 # PCA
-
-# We will perform PCA on GrLivArea and SalePrice from train_df.
-# Load necessary library
-library(stats)
-library(ggbiplot)
-library(ggplot2)
-
-# Perform PCA
 pca_result <- prcomp(variables, scale. = TRUE)
 
 # Summary of PCA
 summary(pca_result)
 
-# Print PCA loadings
+# PCA loadings
 pca_result$rotation
 
-# Print PCA scores
 pca_result$x
 
-# Plot PCA
 library(ggplot2)
 biplot(pca_result)
-
 ```
-Interpretation:
+*Interpretation:*
 
 - The first principal component (PC1) captures 85.43% of the total variance in the data, which means it represents the most significant trend or pattern in the dataset.   
 
@@ -411,47 +388,51 @@ Interpretation:
 
 - The PCA biplot shows that GrLivArea and SalePrice both contribute equally to the primary trend (PC1), representing a combined measure of property size and value, while PC2 highlights the inverse relationship between them, indicating differences between properties with larger living areas but relatively lower prices and vice versa. The cluster of points around the center suggests that most properties have similar characteristics in terms of their living area and sale price, with a few properties showing variations as indicated by their spread along the principal components.    
 
-**Calculus-Based Probability & Statistics.**  
-Many times, it makes sense to fit a closed form distribution to data.
+## 5. Calculus-Based Probability & Statistics  
 
-For your variable that is skewed to the right, shift it so that the minimum value is above zero.
-Then load the MASS package and run fitdistr to fit an exponential probability density function.
+### 5.1 Fitted Exponential Distribution  
 
+**Many times, it makes sense to fit a closed form distribution to data.**
+- **For your variable that is skewed to the right, shift it so that the minimum value is above zero.**  
+
+- **Then load the MASS package and run fitdistr to fit an exponential probability density function.**  
 ```{r}
-library(MASS)
 skewness_grlivarea
 
-# Shift the data so that the minimum value is above zero
+# Shifting the data so that the minimum value is above zero
 shifted_GrLivArea <- train_df$GrLivArea - min(train_df$GrLivArea) + 1
 
-# Use fitdistr to fit an exponential distribution
+# fitdistr to fit an exponential distribution
 fit <- fitdistr(shifted_GrLivArea, "exponential")
 
-# Print the fitted parameters
 print(fit)
 ```
 
-Interpretation:  
-- Rate Parameter (λ): The fitted rate parameter (e.g., 8.456919e-04) of the exponential distribution.
-- Standard Error: The standard error of the estimated parameter (e.g., 2.213277e-05).
+*Interpretation:*   
+- Rate Parameter (λ): The fitted rate parameter (e.g., 8.456919e-04) of the exponential distribution.  
+
+- Standard Error: The standard error of the estimated parameter (e.g., 2.213277e-05).  
 
 This fitted exponential distribution can be used to model the distribution of the shifted GrLivArea data. The rate parameter indicates the expected rate of occurrence for the values in the data. The exponential distribution is characterized by a constant hazard rate, which in this context can help in understanding the distribution pattern of the GrLivArea variable after the shift.
 
-Find the optimal value of λ for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, λ)).
+### 5.2 Optimal Value of λ
+
+**Find the optimal value of λ for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, λ)).**  
 ```{r}
-# Extract the optimal value of lambda
+# The optimal value of lambda
 lambda <- fit$estimate
 cat("Optimal value of λ:", lambda, "\n")
 
-# Generate 1000 samples from the exponential distribution using the fitted λ
+# 1000 samples from the exponential distribution using the fitted λ
 samples <- rexp(1000, rate = lambda)
 
-# Print the first few samples to verify
 print(head(samples))
-
 ```
 
-Plot a histogram and compare it with a histogram of your original variable.
+### 5.3 Plotting and Comparison
+
+**Plot a histogram and compare it with a histogram of your original variable.**  
+
 ```{r}
 # Plot histograms
 par(mfrow = c(1, 2))  # Set up a plotting area with 2 plots side by side
@@ -467,16 +448,19 @@ hist(samples, breaks = 30, main = "Histogram of Generated Samples",
 lines(density(samples), col = "red", lwd = 2)
 ```
 
-**Comparison**  
+*Comparison*  
 
 - The histograms and density lines show a good visual match between the shifted original data and the generated samples, indicating that the exponential distribution is a reasonable fit for the right-skewed GrLivArea data.  
 
 - The right skew and the overall shape of both distributions are similar, supporting the use of the exponential distribution to model the GrLivArea variable.  
 
-Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).
+### 5.4 PDF and CDF
+
+**Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).**  
+
 ```{r}
 
-# Calculate the 5th and 95th percentiles
+# The 5th and 95th percentiles
 percentile_5th <- qexp(0.05, rate = lambda)
 percentile_95th <- qexp(0.95, rate = lambda)
 
@@ -486,55 +470,56 @@ cat("95th percentile:", percentile_95th, "\n")
 
 ```
 
+**Also generate a 95% confidence interval from the empirical data, assuming normality.**  
 
-Also generate a 95% confidence interval from the empirical data, assuming normality.
 ```{r}
 
-# Calculate the sample mean and standard deviation
+# The sample mean and standard deviation
 sample_mean <- mean(shifted_GrLivArea)
 sample_sd <- sd(shifted_GrLivArea)
 n <- length(shifted_GrLivArea)  # Sample size
 
-# Calculate the t-critical value for a 95% confidence interval
+# t-critical value for a 95% confidence interval
 alpha <- 0.05
 t_critical <- qt(1 - alpha / 2, df = n - 1)
 
-# Calculate the margin of error
+# Margin of error
 margin_of_error <- t_critical * (sample_sd / sqrt(n))
 
-# Calculate the 95% confidence interval
+# 95% confidence interval
 ci_lower <- sample_mean - margin_of_error
 ci_upper <- sample_mean + margin_of_error
 
-# Print the confidence interval
 cat("95% Confidence Interval: [", ci_lower, ", ", ci_upper, "]\n")
 
 ```
 
-Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.
+**Finally, provide the empirical 5th percentile and 95th percentile of the data.  Discuss.**  
+
 ```{r}
-# Calculate the 5th and 95th percentiles
+# The 5th and 95th percentiles
 percentile_5th_empirical <- quantile(shifted_GrLivArea, 0.05)
 percentile_95th_empirical <- quantile(shifted_GrLivArea, 0.95)
 
-# Print the percentiles
 cat("Empirical 5th percentile:", percentile_5th_empirical, "\n")
 cat("Empirical 95th percentile:", percentile_95th_empirical, "\n")
 
 ```
 
-**Interpretation of Empirical Percentiles**
+*Interpretation of Empirical Percentiles*  
 
 - Empirical 5th Percentile (515): Indicates that 5% of the properties have a GrLivArea below 515, showing the lower bound for typical property sizes.  
 
 - Empirical 95th Percentile (2133.1): Indicates that 95% of the properties have a GrLivArea below 2133.1, showing the upper bound for typical property sizes.  
 
-- Comparison: The empirical percentiles differ significantly from the theoretical percentiles (52.68 and 3523.99), suggesting the exponential model does not perfectly fit the data. The empirical data is more concentrated within a specific range.
+*Comparison:*  
+The empirical percentiles differ significantly from the theoretical percentiles (52.68 and 3523.99), suggesting the exponential model does not perfectly fit the data. The empirical data is more concentrated within a specific range.  
 
-**Modeling.**
-Build some type of regression  model and submit your model to the competition board. 
-Provide your complete model summary and results with analysis. 
-Report your Kaggle.com  user name and score.
+## 6. Modeling  
+
+**Build some type of regression  model and submit your model to the competition board.**   
+**Provide your complete model summary and results with analysis.**   
+**Report your Kaggle.com  user name and score.**  
 
 ```{r}
 # Log transform the skewed variables
@@ -542,27 +527,26 @@ train_df$SalePrice <- log(train_df$SalePrice)
 train_df$GrLivArea <- log(train_df$GrLivArea)
 test_df$GrLivArea <- log(test_df$GrLivArea)
 
-# Select relevant features for the model using base R syntax
+# The relevant features for the model
 train_data <- train_df[, c("SalePrice", "GrLivArea", "OverallQual", "YearBuilt", "TotalBsmtSF", "GarageCars", "FullBath", "TotRmsAbvGrd", 
                            "YearRemodAdd", "BsmtFinSF1", "X1stFlrSF", "X2ndFlrSF", "Fireplaces")]
 test_data <- test_df[, c("Id", "GrLivArea", "OverallQual", "YearBuilt", "TotalBsmtSF", "GarageCars", "FullBath", "TotRmsAbvGrd", 
                          "YearRemodAdd", "BsmtFinSF1", "X1stFlrSF", "X2ndFlrSF", "Fireplaces")]
 
-# Impute missing values using median imputation
+# Using median imputation to impute missing values 
 preProcValues <- preProcess(train_data, method = c("medianImpute"))
 train_data <- predict(preProcValues, train_data)
 test_data <- predict(preProcValues, test_data)
 
-# Build the linear regression model
+# Our linear regression model
 model <- lm(SalePrice ~ ., data = train_data)
 
-# Summary of the model
 summary(model)
 
-# Make predictions on the test dataset
+# Predictions on the test dataset
 predictions <- exp(predict(model, newdata = test_data))  # Inverse of log transformation
 
-# Prepare the submission file, ensuring all Ids are included
+# Kaggle ubmission file
 submission <- data.frame(Id = test_df$Id, SalePrice = predictions)
 write.csv(submission, file = "haig_bedros_605_finals_submission.csv", row.names = FALSE)
 
