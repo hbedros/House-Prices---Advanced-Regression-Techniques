@@ -75,14 +75,6 @@ Y <- train_df$SalePrice
 # Scatter plot to examine the relationship
 plot(X, Y, main="Scatter Plot", xlab="GrLivArea", ylab="SalePrice")
 
-# Fit initial model
-model <- lm(SalePrice ~ GrLivArea, data=train_df)
-summary(model)
-
-# Check residuals
-plot(model$residuals, main="Residuals of Model", ylab="Residuals", xlab="Index")
-hist(model$residuals, main="Histogram of Residuals", xlab="Residuals", breaks=30)
-
 ```
 
 ## 2. Probability  
@@ -359,7 +351,7 @@ print(identity_matrix_2)
 
 The strong positive correlation (0.7086245) between GrLivArea and SalePrice indicates that larger living areas are associated with higher sale prices. The variance inflation factors (VIFs) around 2.008632 suggest moderate collinearity. Matrix multiplications confirm the precision matrix as the correct inverse of the correlation matrix.  
 
-### 4.2 Principle Components Analysis (PSA)
+### 4.2 Principle Components Analysis (PCA)
 
 **Conduct principle components analysis (research this!)  and interpret.  Discuss.**  
 ```{r}
@@ -392,7 +384,8 @@ biplot(pca_result)
 
 ### 5.1 Fitted Exponential Distribution  
 
-**Many times, it makes sense to fit a closed form distribution to data.**
+**Many times, it makes sense to fit a closed form distribution to data.**  
+
 - **For your variable that is skewed to the right, shift it so that the minimum value is above zero.**  
 
 - **Then load the MASS package and run fitdistr to fit an exponential probability density function.**  
@@ -409,6 +402,7 @@ print(fit)
 ```
 
 *Interpretation:*   
+
 - Rate Parameter (λ): The fitted rate parameter (e.g., 8.456919e-04) of the exponential distribution.  
 
 - Standard Error: The standard error of the estimated parameter (e.g., 2.213277e-05).  
